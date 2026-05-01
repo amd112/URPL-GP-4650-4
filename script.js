@@ -53,7 +53,7 @@ const map = new mapboxgl.Map({
     container: 'map',
     style: 'mapbox://styles/mapbox/light-v11',
     center: [-73.966, 40.673],
-    zoom: 13
+    zoom: 13.25
 });
 
 map.on('load', () => {
