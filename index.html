@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<!------------------------------------------------------->
+<!-- head -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apartment Hunt Narrative</title>
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<!------------------------------------------------------->
+<!-- body -->
+
+<body>
+    <!------------------------------------------------------->
+    <!-- corner title + description -->
+    <div class="map-description" id="description-panel">
+    <h2 onclick="toggleDescription()" style="cursor: pointer;">
+        The Apartment Hunt <span id="toggle-arrow">▾</span>
+    </h2>
+    <div class="description-content" id="desc-content">
+        <p>I just found out my roommates and I are not getting our lease renewed... after 12 years here! :( We're open to going separate ways, sticking together entirely, or partially staying together, which makes looking for housing hard, with a lot of things to weigh. </p>
+
+        <p>This map shows the places we've been sharing with each other, and the stats behind them. We care about being <strong>rent stabilized</strong> (not getting kicked out again!), location, and how we can <strong>equitably split rent</strong>, all displayed here. </p>
+    </div>
+    </div>
+
+    <!------------------------------------------------------->
+    <!-- map! -->
+    <div id="map"></div>
+
+    <!------------------------------------------------------->
+    <!-- guides to UWS + bk -->
+    <div id="top-guide" class="edge-guide top">
+        <span>↑ Upper West Side Options</span>
+    </div>
+
+    <div id="bottom-guide" class="edge-guide bottom">
+        <span>↓ Brooklyn Options</span>
+    </div>
+
+    <!------------------------------------------------------->
+    <!-- legend -->
+    <div class="legend">
+        <h4>Color: My share of the rent</h4>
+        <div class="gradient-bar"></div>
+        <div class="gradient-labels">
+            <span>$900</span>
+            <span>$2000+</span>
+        </div>
+        
+        <hr>
+
+        <h4>Size: Total price/Total beds</h4>
+        <div class="size-legend">
+            <div class="size-item">
+                <span class="dot-sample" style="width: 20px; height: 20px;"></span>
+                <span>Great Deal ($900)</span>
+            </div>
+            <div class="size-item" style="margin-top: 8px;">
+                <span class="dot-sample" style="width: 8px; height: 8px;"></span>
+                <span>Worse Deal ($2000+)</span>
+            </div>
+        </div>
+
+        <hr>
+        
+
+        <h4>Extras</h4>
+        <div class="legend-item">
+            <span class="glow-sample visited"></span> 
+            <span>Visited</span>
+        </div>
+        <div class="legend-item">
+            <span class="glow-sample applied"></span> 
+            <span>Applied</span>
+        </div>
+        <div class="legend-item">
+            <span class="circle rs-border"></span> 
+            <span>Rent Stabilized</span>
+        </div>
+    </div>
+
+    <div class="legend">
+        <h4>Color: My share of the rent</h4>
+    <div class="gradient-bar"></div>
+    <div class="gradient-labels">
+        <span>$800</span>
+        <span>$2000+</span>
+    </div>
+    
+    <hr>
+
+    <h4>Size: Total price/Total beds</h4>
+    <div class="size-legend">
+        <div class="size-item">
+            <span class="dot-sample" style="width: 16px; height: 16px;"></span>
+            <span>Better Deal</span>
+        </div>
+        <div class="size-item" style="margin-top: 8px;">
+            <span class="dot-sample" style="width: 6px; height: 6px;"></span>
+            <span>Pricey</span>
+        </div>
+    </div>
+
+    <hr>
+    
+    <h4>Glows + Outlines</h4>
+    <div class="legend-item">
+        <div style="width: 30px; display: flex; justify-content: center;">
+            <span class="glow-sample visited"></span>
+        </div>
+        <span>Visited</span>
+    </div>
+    <div class="legend-item">
+        <div style="width: 30px; display: flex; justify-content: center;">
+            <span class="glow-sample applied"></span>
+        </div>
+        <span>Applied</span>
+    </div>
+    <div class="legend-item">
+        <span class="circle rs-border"></span> 
+        <span>Rent Stabilized</span>
+    </div>
+</div>
+
+    <!-- load in JS -->
+    <script src="script.js"></script>
+</body>
+</html>

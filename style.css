@@ -1,0 +1,168 @@
+/* general */
+body, html { margin: 0; padding: 0; height: 100%; font-family: 'Helvetica Neue', sans-serif; }
+
+#map { position: absolute; top: 0; bottom: 0; width: 100%; }
+
+/*--------------------------------------------------------*/
+/* legend */
+.legend {
+    position: absolute;
+    bottom: 40px;
+    left: 20px;
+    background: white;
+    padding: 20px;
+    border-radius: 20px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+    z-index: 1;
+    width: 200px;
+}
+
+.legend h4 { margin: 0 0 10px; font-size: 14px; color: #333; }
+
+.gradient-bar {
+    height: 12px;
+    width: 100%;
+    border-radius: 6px;
+    background: linear-gradient(to right, #91D694, #ffdac1, #F54927);
+    margin-bottom: 5px;
+}
+
+.gradient-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: #888;
+    margin-bottom: 15px;
+}
+
+.size-legend {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 5px 0;
+}
+
+.size-item {
+    display: flex;
+    align-items: center;
+    font-size: 12px;
+    color: #666;
+}
+
+/* size legend dots */
+.dot-sample {
+    background: #bbb;
+    border: 1px solid #ffffff;
+    border-radius: 50%;
+    margin-right: 12px;
+    display: inline-block;
+}
+
+.glow-sample {
+    width: 24px;   /* Increased size to make the blur visible */
+    height: 24px;
+    border-radius: 50%;
+    margin-right: 10px;
+    display: inline-block;
+}
+
+/* Match Visited Glow: #2A2D34 with 0.4 Opacity and 1.8px Blur */
+.visited {
+    background-color: #2A2D34;
+    filter: blur(1.8px);
+    opacity: 0.3;
+}
+
+.applied {
+    background-color: #59A55C;
+    filter: blur(2px);
+    opacity: 0.5;
+}
+
+
+hr { border: 0; border-top: 1px solid #eee; margin: 10px 0; }
+
+.legend-item { display: flex; align-items: center; margin-bottom: 8px; font-size: 12px; }
+
+.circle { width: 12px; height: 12px; border-radius: 50%; margin-right: 10px; display: inline-block; }
+.rs-border { border: 2px solid #363636; background: #fff; }
+
+
+/*--------------------------------------------------------*/
+/* context in corner */
+
+.map-description {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    z-index: 2;
+    max-width: 300px;
+    border-left: 5px solid #F54927; /* Accent color from your applied glow */
+}
+
+.description-content {
+    max-height: 500px; /* Large enough to hold the text */
+    overflow: hidden;
+    transition: max-height 0.3s ease-out, opacity 0.3s ease;
+    margin-top: 10px;
+    opacity: 1;
+}
+
+.description-content.collapsed {
+    max-height: 0;
+    margin-top: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.map-description h2 {
+    margin: 0;
+    font-size: 18px;
+    color: #333;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.map-description p { margin: 0; font-size: 13px; line-height: 1.5; color: #666; }
+
+
+/*--------------------------------------------------------*/
+/* buttons to UWS + brooklyn */
+
+.edge-guide {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    background: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: bold;
+    color: #F54927;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    pointer-events: auto;
+    cursor: pointer;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    opacity: 0; 
+}
+
+.edge-guide.top {
+    top: 20px;
+    transform: translate(-50%, -20px); /* Slide up slightly when hidden */
+}
+
+.edge-guide.bottom {
+    bottom: 20px;
+    transform: translate(-50%, 20px); /* Slide down slightly when hidden */
+}
+
+.edge-guide.visible {
+    opacity: 1;
+    transform: translate(-50%, 0);
+}
