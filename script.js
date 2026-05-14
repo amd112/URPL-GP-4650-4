@@ -1,176 +1,145 @@
-mapboxgl.accessToken = 'pk.eyJ1IjoiYW1kMTEyIiwiYSI6ImNtbnhxNHVsbjA0dDUycHExZWRqN2dtaWEifQ.RchV-MZSTqwC8fMtMIy_Xg'; 
+document.addEventListener('DOMContentLoaded', () => {
+    const modal = document.getElementById('intro-modal');
+    const closeBtn = document.querySelector('.modal-close-btn');
 
-const topGuide = document.getElementById('top-guide');
-const bottomGuide = document.getElementById('bottom-guide');
-
-//-------------------------------------------------------
-// functions 
-
-function updateEdgeGuides() {
-    if (!map.getBounds()) return;
-
-    const bounds = map.getBounds();
-    const northEdge = bounds.getNorth();
-    const southEdge = bounds.getSouth();
-
-    // Trigger for UWS (Top)
-    // If the top of our screen is south of the UWS cluster
-    if (northEdge < 40.764143) {
-        topGuide.classList.add('visible');
-    } else {
-        topGuide.classList.remove('visible');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            modal.style.display = 'none';
+            console.log("Modal closed via Event Listener");
+        });
     }
-
-    // Trigger for Brooklyn (Bottom)
-    // If the bottom of our screen is north of the Brooklyn cluster
-    if (southEdge > 40.690934) {
-        bottomGuide.classList.add('visible');
-    } else {
-        bottomGuide.classList.remove('visible');
-    }
-}
-
-function toggleDescription() {
-    const content = document.getElementById('desc-content');
-    const arrow = document.getElementById('toggle-arrow');
-    
-    // Toggle the class
-    content.classList.toggle('collapsed');
-    
-    // Rotate arrow for visual feedback
-    if (content.classList.contains('collapsed')) {
-        arrow.style.transform = 'rotate(-90deg)';
-        arrow.innerText = '▸';
-    } else {
-        arrow.style.transform = 'rotate(0deg)';
-        arrow.innerText = '▾';
-    }
-}
-
-//-------------------------------------------------------
-// map! 
-const map = new mapboxgl.Map({
-    container: 'map',
-    style: 'mapbox://styles/mapbox/light-v11',
-    center: [-73.966, 40.673],
-    zoom: 13.25
 });
 
+mapboxgl.accessToken = 'pk.eyJ1IjoiYW1kMTEyIiwiYSI6ImNtbnhxNHVsbjA0dDUycHExZWRqN2dtaWEifQ.RchV-MZSTqwC8fMtMIy_Xg'; 
+
+const sources = {
+    relief: "data/relief.geojson",
+    hydration: "data/hydration.geojson",
+    energy: ["data/linknyc.geojson", 
+            "data/nypl_mn.geojson", 
+            "data/nypl_si.geojson", 
+            "data/nypl_bx.geojson", 
+            "data/library_qn.geojson"], // Add your full list here
+    sanctuary: ["data/sanctuary.geojson", "data/parks.geojson"], 
+    water: "data/waterfountains.geojson"
+};
+
+const map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/mapbox/dark-v11',
+    center: [-73.96, 40.71],
+    zoom: 13,
+    pitch: 45
+});
+
+// User Location logic
+const geolocate = new mapboxgl.GeolocateControl({
+    positionOptions: { enableHighAccuracy: true },
+    trackUserLocation: true,
+    showUserHeading: true
+});
+map.addControl(geolocate);
+
 map.on('load', () => {
+    geolocate.trigger();
+});
 
-    // bring in data
-    map.addSource('apartments', {
-        type: 'geojson',
-        data: 'apartments.geojson'
-    });
+const colors = {
+    relief: '#FF5733', hydration: '#33CCFF',
+    energy: '#FFD700', sanctuary: '#2ECC71'
+};
 
-    //-------------------------------------------------------
-    // glows
+const activeCategories = new Set();
 
-    // add base layer "glow" for places I visited
-    map.addLayer({
-        id: 'visited-glow',
-        type: 'circle',
-        source: 'apartments',
-        paint: {
-            'circle-radius': ['case',
-                ['all', 
-                    ['==', ['get', 'visit'], 1], 
-                    ['==', ['get', 'apply'], 0]
-            ], 35, 0], 
-            'circle-color': '#2A2D34',
-            'circle-blur': 2,
-            'circle-opacity': 0.7
-        }
-    });
-
-    // add layer "glow" for places I applied to
-    map.addLayer({
-        id: 'applied-glow',
-        type: 'circle',
-        source: 'apartments',
-        paint: {
-            'circle-radius': ['match', ['get', 'apply'], 1, 45, 0],
-            'circle-color': '#59A55C',
-            'circle-blur': 1.8,
-            'circle-opacity': 1
-        }
-    });
-
-    //-------------------------------------------------------
-    // points
-    map.addLayer({
-        id: 'apartments-main',
-        type: 'circle',
-        source: 'apartments',
-        paint: {
-            // radius = smaller for expensive 
-            'circle-radius': [
-                'interpolate', ['linear'], ['get', 'price_per_bed'],
-                900, 10,
-                2000, 4
-            ],
-            // color = based on my rent
-            'circle-color': [
-                'interpolate', ['linear'], ['get', 'A1'],
-                1000, '#91D694',  // Matches Legend Start
-                1500, '#ffdac1',  // Middle
-                2000, '#F54927'   // Matches Legend End
-            ],
-            
-            // border = rent stabilized
-            'circle-stroke-width': ['match', ['get', 'rs'], 1, 2.5, 1],
-            'circle-stroke-color': ['match', ['get', 'rs'], 1, '#363636', '#ffffff'],
-            'circle-opacity': 1
-        }
-    });
-
-    //-------------------------------------------------------
-    // popups
-    map.on('click', 'apartments-main', (e) => {
-
-        // get coords
-        const coordinates = e.features[0].geometry.coordinates.slice();
-        const p = e.features[0].properties;
+async function toggleCategory(category) {
+    const btn = document.getElementById(`btn-${category}`);
+    
+    if (activeCategories.has(category)) {
+        activeCategories.delete(category);
+        btn.classList.remove('active');
+        btn.style.backgroundColor = 'transparent';
+        btn.style.color = '';
         
-        // add fun little text for each of the states
-        const status = p.apply ? "💖 Applied" : (p.visit ? "✨ Visited" : "📍 Saved");
-        
+        if (map.getLayer(`${category}-layer`)) map.setLayoutProperty(`${category}-layer`, 'visibility', 'none');
+        if (map.getLayer(`${category}-fill`)) map.setLayoutProperty(`${category}-fill`, 'visibility', 'none');
+    } else {
+        activeCategories.add(category);
+        btn.classList.add('active');
+        btn.style.backgroundColor = colors[category];
+        btn.style.color = '#000';
 
-        while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
-            coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+        if (map.getSource(category)) {
+            map.setLayoutProperty(`${category}-layer`, 'visibility', 'visible');
+            if (map.getLayer(`${category}-fill`)) map.setLayoutProperty(`${category}-fill`, 'visibility', 'visible');
+        } else {
+            await loadNewLayer(category);
+        }
+    }
+}
+
+async function loadNewLayer(category) {
+    const status = document.getElementById('status-indicator');
+    status.style.display = 'block';
+
+    try {
+        let paths = Array.isArray(sources[category]) ? sources[category] : [sources[category]];
+        const results = await Promise.all(paths.map(path => fetch(path).then(res => res.json())));
+        const mergedFeatures = results.flatMap(data => data.features);
+        const geojson = { type: "FeatureCollection", features: mergedFeatures };
+
+        map.addSource(category, { type: 'geojson', data: geojson });
+
+        // Add Polygon Fill (Bottom Layer)
+        if (category === 'sanctuary') {
+            map.addLayer({
+                id: `${category}-fill`,
+                type: 'fill',
+                source: category,
+                filter: ['==', ['geometry-type'], 'Polygon'],
+                paint: { 'fill-color': colors[category], 'fill-opacity': 0.3 }
+            }, 'road-label'); // Places it behind text/roads
         }
 
-        // combo the text for the popup and set 
-        new mapboxgl.Popup()
-            .setLngLat(coordinates)
+        // Add Glowing Points
+        map.addLayer({
+            id: `${category}-layer`,
+            type: 'circle',
+            source: category,
+            filter: ['==', ['geometry-type'], 'Point'],
+            paint: {
+                'circle-radius': 6,
+                'circle-color': colors[category],
+                'circle-stroke-width': 0,
+                'circle-stroke-color': '#fff',
+                'circle-blur': 1, // Soft dashboard glow
+                'circle-opacity': 0.9
+            }
+        });
+
+        setupPopupListeners(category);
+    } catch (err) {
+        console.error("Fetch Error for:", category, err);
+    } finally {
+        status.style.display = 'none';
+    }
+}
+
+function setupPopupListeners(category) {
+    map.on('click', `${category}-layer`, (e) => {
+        const props = e.features[0].properties;
+        const name = props.name || props.facility_name || props.facname || props.propertyna || props.title || props.planned_kiosk_type || props.branch || props.signname || props.gardenname || props.description;
+        const addr = props.address || props.location || props.address_1 || props.crossstreets || props.position  || props.street_address || "-";
+
+        new mapboxgl.Popup({ offset: [0, -10] })
+            .setLngLat(e.lngLat)
             .setHTML(`
-                <div style="padding:5px; font-family: 'Helvetica Neue', sans-serif;">
-                    <h3 style="margin:0; color:#333;">$${p.price}</h3>
-                    <p style="margin:5px 0; color:#F54927;"><b>${status}</b></p>
-                    <p style="margin:0; font-size:12px"><b>My Share:</b> $${p.A1}</p>
-                    <p style="margin:2px 0; font-size:12px"><b>Per Bed:</b> $${p.price_per_bed}</p>
-                    <p style="margin:8px 0 0; font-size:11px; color:#888; text-transform:uppercase; letter-spacing:0.5px;">
-                        ${p.rs ? '🔒 Rent Stabilized' : '📈 Market Rate'}
-                    </p>
-                </div>
+                <span class="popup-category-pill" style="background:${colors[category]}33; color:${colors[category]}">${category}</span>
+                <h3 class="popup-title">${name}</h3>
+                <p class="popup-address">${addr}</p>
             `)
             .addTo(map);
     });
 
-// figure out when to show brooklyn or UWS
-map.on('move', updateEdgeGuides);
-
-// teleport to the cluster on clock
-topGuide.addEventListener('click', () => {
-    map.flyTo({ center: [-73.966, 40.811], zoom: 12.5 });
-});
-
-bottomGuide.addEventListener('click', () => {
-    map.flyTo({ center: [-73.966, 40.673], zoom: 13 });
-});
-
-
-    map.on('mouseenter', 'apartments-main', () => map.getCanvas().style.cursor = 'pointer');
-    map.on('mouseleave', 'apartments-main', () => map.getCanvas().style.cursor = '');
-});
+    map.on('mouseenter', `${category}-layer`, () => map.getCanvas().style.cursor = 'pointer');
+    map.on('mouseleave', `${category}-layer`, () => map.getCanvas().style.cursor = '');
+}
