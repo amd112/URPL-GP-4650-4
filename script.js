@@ -1,175 +1,239 @@
-document.addEventListener('click', function (e) {
-    if (e.target && e.target.id === 'close-intro') {
-        const modal = document.getElementById('intro-modal');
-        if (modal) {
-            modal.style.display = 'none';
-            console.log("Modal closed");
-        }
-    }
-});
+/* ═══════════════════════════════════════════════════════
+   NYC HITCHHIKER'S GUIDE — SCRIPT
+   ═══════════════════════════════════════════════════════ */
 
-const nycBounds = [
-    [-74.25909, 40.477399], 
-    [-73.700272, 40.917577]
-];
+// ── CONFIG ───────────────────────────────────────────────
 
-// Run the modal setup as soon as the window loads
-window.onload = setupModal;
+const MAPBOX_TOKEN = 'pk.eyJ1IjoiYW1kMTEyIiwiYSI6ImNtbnhxNHVsbjA0dDUycHExZWRqN2dtaWEifQ.RchV-MZSTqwC8fMtMIy_Xg';
 
-// This ensures buttons go back to light grey/dark text when toggled off
-const resetBtnStyle = (btn) => {
-    console.log("Resetting button:", btn.id); // Check your console to see if this appears
-    
-    btn.classList.remove('active');
-    
-    // This removes the inline 'style' attributes entirely
-    // so the button MUST go back to your CSS settings
-    btn.style.removeProperty('background-color');
-    btn.style.removeProperty('color');
-    
-    // Just in case, force the browser to see it as white
-    btn.style.backgroundColor = "#ffffff";
-    btn.style.color = "#000000";
+const NYC_BOUNDS = [[-74.25909, 40.477399], [-73.700272, 40.917577]];
+
+/** Each category: its colour, data source(s), and label copy. */
+const CATEGORIES = {
+  water: {
+    color:   '#33CCFF',
+    label:   'Water',
+    sources: ['data/hydration.geojson'],
+  },
+  power: {
+    color:   '#FFD700',
+    label:   'Power',
+    sources: ['data/linknyc.geojson', 'data/nypl_mn.geojson', 'data/nypl_si.geojson',
+              'data/nypl_bx.geojson', 'data/library_qn.geojson'],
+  },
+  relief: {
+    color:   '#FF6B35',
+    label:   'Relief',
+    sources: ['data/relief.geojson'],
+  },
+  rest: {
+    color:   '#4CAF50',
+    label:   'Rest',
+    sources: ['data/parks.geojson'],
+  },
 };
 
-mapboxgl.accessToken = 'pk.eyJ1IjoiYW1kMTEyIiwiYSI6ImNtbnhxNHVsbjA0dDUycHExZWRqN2dtaWEifQ.RchV-MZSTqwC8fMtMIy_Xg';
-const map = new mapboxgl.Map({
-    container: 'map',
-    style: 'mapbox://styles/mapbox/dark-v11',
-    center: [-73.96, 40.71],
-    zoom: 13,
-    pitch: 45,
-    maxBounds: nycBounds 
-});
+// ── STATE ────────────────────────────────────────────────
 
-const sources = {
-    relief: "data/relief.geojson",
-    hydration: "data/hydration.geojson",
-    energy: ["data/linknyc.geojson", "data/nypl_mn.geojson", "data/nypl_si.geojson", "data/nypl_bx.geojson", "data/library_qn.geojson"]
-};
-
-const colors = {
-    relief: '#FF5733', 
-    hydration: '#33CCFF',
-    energy: '#FFD700'
-};
-
+/** Tracks which categories are currently toggled on. */
 const activeCategories = new Set();
 
+// ── MAP INIT ─────────────────────────────────────────────
 
-async function toggleCategory(category) {
-    console.log("Button clicked for:", category); // This will prove the function is running
-    
-    const btn = document.getElementById(`btn-${category}`);
-    if (!btn) return;
+mapboxgl.accessToken = MAPBOX_TOKEN;
 
-    // Check if the button is ALREADY active by looking at its class
-    const isCurrentlyActive = btn.classList.contains('active');
-
-    if (isCurrentlyActive) {
-        // --- TURN OFF LOGIC ---
-        console.log("Turning OFF:", category);
-        btn.classList.remove('active');
-        
-        // Force the background to WHITE and text to BLACK
-        btn.style.backgroundColor = "#ffffff";
-        btn.style.color = "#000000";
-        
-        activeCategories.delete(category);
-
-        if (map.getLayer(`${category}-layer`)) {
-            map.setLayoutProperty(`${category}-layer`, 'visibility', 'none');
-        }
-    } else {
-        // --- TURN ON LOGIC ---
-        console.log("Turning ON:", category);
-        btn.classList.add('active');
-        
-        // Set the color from your colors object
-        btn.style.backgroundColor = colors[category];
-        btn.style.color = '#000000';
-        
-        activeCategories.add(category);
-
-        if (map.getSource(category)) {
-            map.setLayoutProperty(`${category}-layer`, 'visibility', 'visible');
-        } else {
-            await loadNewLayer(category);
-        }
-    }
-}
-
-// 4. MAP LOAD EVENTS
-map.on('load', () => {
-    // Add user location
-    const geolocate = new mapboxgl.GeolocateControl({
-        positionOptions: { enableHighAccuracy: true },
-        trackUserLocation: true,
-        showUserHeading: true
-    });
-    map.addControl(geolocate);
-    geolocate.trigger();
-
-    // Auto-toggle restrooms
-    setTimeout(() => toggleCategory('relief'), 500);
+const map = new mapboxgl.Map({
+  container:  'map',
+  style:      'mapbox://styles/mapbox/dark-v11',
+  center:     [-73.96, 40.71],
+  zoom:       13,
+  pitch:      40,
+  maxBounds:  NYC_BOUNDS,
 });
 
-// 5. DATA LOADING LOGIC
-async function loadNewLayer(category) {
-    const status = document.getElementById('status-indicator');
-    status.style.display = 'block';
+// ── MODAL ────────────────────────────────────────────────
 
-    try {
-        let paths = Array.isArray(sources[category]) ? sources[category] : [sources[category]];
-        const results = await Promise.all(paths.map(path => 
-            fetch(path).then(res => {
-                if (!res.ok) throw new Error("File not found");
-                return res.json();
-            })
-        ));
-        
-        const mergedFeatures = results.flatMap(data => data.features);
-        const geojson = { type: "FeatureCollection", features: mergedFeatures };
-
-        map.addSource(category, { type: 'geojson', data: geojson });
-
-        map.addLayer({
-            id: `${category}-layer`,
-            type: 'circle',
-            source: category,
-            filter: ['==', ['geometry-type'], 'Point'],
-            paint: {
-                'circle-radius': 6,
-                'circle-color': colors[category],
-                'circle-blur': 1,
-                'circle-opacity': 0.9
-            }
-        });
-
-        setupPopupListeners(category);
-    } catch (err) {
-        console.error("Error loading data:", err);
-    } finally {
-        status.style.display = 'none';
-    }
+function initModal() {
+  const modal  = document.getElementById('intro-modal');
+  const button = document.getElementById('close-intro');
+  button.addEventListener('click', () => {
+    modal.style.display = 'none';
+  });
 }
 
-function setupPopupListeners(category) {
-    map.on('click', `${category}-layer`, (e) => {
-        const props = e.features[0].properties;
-        const name = props.name || props.facility_name || props.title || "Resource";
-        const addr = props.address || props.location || "-";
+// ── GEOLOCATION ──────────────────────────────────────────
 
-        new mapboxgl.Popup({ offset: [0, -10] })
-            .setLngLat(e.lngLat)
-            .setHTML(`
-                <span class="popup-category-pill" style="background:${colors[category]}33; color:${colors[category]}">${category}</span>
-                <h3 class="popup-title" style="color:white; margin-top:5px;">${name}</h3>
-                <p class="popup-address" style="color:#aaa;">${addr}</p>
-            `)
-            .addTo(map);
+function initGeolocation() {
+  const geolocate = new mapboxgl.GeolocateControl({
+    positionOptions:   { enableHighAccuracy: true },
+    trackUserLocation: true,
+    showUserHeading:   true,
+  });
+  map.addControl(geolocate, 'bottom-right');
+  // Trigger after a short delay so the map is fully settled
+  setTimeout(() => geolocate.trigger(), 600);
+}
+
+// ── DATA LOADING ─────────────────────────────────────────
+
+/**
+ * Fetches one or more GeoJSON files and merges their features
+ * into a single FeatureCollection.
+ */
+async function fetchMergedGeoJSON(paths) {
+  const responses = await Promise.all(
+    paths.map(async (path) => {
+      const res = await fetch(path);
+      if (!res.ok) throw new Error(`Failed to load: ${path}`);
+      return res.json();
+    })
+  );
+  return {
+    type: 'FeatureCollection',
+    features: responses.flatMap((data) => data.features ?? []),
+  };
+}
+
+/**
+ * Adds a GeoJSON source + circle layer for the given category
+ * and wires up click / hover interactions.
+ */
+async function loadCategoryLayer(id) {
+  const category = CATEGORIES[id];
+  setStatus(true);
+
+  try {
+    const geojson = await fetchMergedGeoJSON(category.sources);
+
+    map.addSource(id, { type: 'geojson', data: geojson });
+
+    map.addLayer({
+      id:     `${id}-layer`,
+      type:   'circle',
+      source: id,
+      filter: ['==', ['geometry-type'], 'Point'],
+      paint: {
+        'circle-radius':  [
+          'interpolate', ['linear'], ['zoom'],
+          11, 4,
+          15, 8,
+        ],
+        'circle-color':   category.color,
+        'circle-opacity': 0.9,
+        'circle-blur':    0.6,
+        'circle-stroke-width': 1,
+        'circle-stroke-color': 'rgba(255,255,255,0.2)',
+      },
     });
 
-    map.on('mouseenter', `${category}-layer`, () => map.getCanvas().style.cursor = 'pointer');
-    map.on('mouseleave', `${category}-layer`, () => map.getCanvas().style.cursor = '');
+    bindPopup(id);
+    bindCursorHover(id);
+
+  } catch (err) {
+    console.error(`[Guide] Error loading "${id}":`, err);
+  } finally {
+    setStatus(false);
+  }
 }
+
+// ── POPUP ────────────────────────────────────────────────
+
+function bindPopup(id) {
+  const { color } = CATEGORIES[id];
+
+  map.on('click', `${id}-layer`, (e) => {
+    const props = e.features[0].properties;
+
+    const name = props.name
+               || props.facility_name
+               || props.title
+               || 'Unnamed Resource';
+
+    const address = props.address
+                  || props.location
+                  || props.addr
+                  || '—';
+
+    new mapboxgl.Popup({ offset: [0, -6], maxWidth: '280px' })
+      .setLngLat(e.lngLat)
+      .setHTML(`
+        <span class="popup-pill"
+              style="background:${color}22; color:${color}; border:1px solid ${color}44;">
+          ${CATEGORIES[id].label}
+        </span>
+        <div class="popup-name">${name}</div>
+        <div class="popup-address">${address}</div>
+      `)
+      .addTo(map);
+  });
+}
+
+function bindCursorHover(id) {
+  const canvas = map.getCanvas();
+  map.on('mouseenter', `${id}-layer`, () => { canvas.style.cursor = 'pointer'; });
+  map.on('mouseleave', `${id}-layer`, () => { canvas.style.cursor = '';        });
+}
+
+// ── CATEGORY TOGGLE ───────────────────────────────────────
+
+async function toggleCategory(id) {
+  const btn      = document.getElementById(`btn-${id}`);
+  const isActive = activeCategories.has(id);
+
+  if (isActive) {
+    // ── Turn off ──
+    activeCategories.delete(id);
+    btn.classList.remove('active');
+    btn.style.removeProperty('--cat-color');
+    btn.setAttribute('aria-pressed', 'false');
+
+    if (map.getLayer(`${id}-layer`)) {
+      map.setLayoutProperty(`${id}-layer`, 'visibility', 'none');
+    }
+
+  } else {
+    // ── Turn on ──
+    activeCategories.add(id);
+    btn.classList.add('active');
+    btn.style.setProperty('--cat-color', CATEGORIES[id].color);
+    btn.setAttribute('aria-pressed', 'true');
+
+    if (map.getSource(id)) {
+      // Source already loaded — just show it
+      map.setLayoutProperty(`${id}-layer`, 'visibility', 'visible');
+    } else {
+      // First time — fetch and add
+      await loadCategoryLayer(id);
+    }
+  }
+}
+
+// ── BUTTON WIRING ────────────────────────────────────────
+
+function initButtons() {
+  document.querySelectorAll('.cat-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.category;
+      if (id) toggleCategory(id);
+    });
+  });
+}
+
+// ── STATUS INDICATOR ─────────────────────────────────────
+
+function setStatus(visible) {
+  const el = document.getElementById('status-bar');
+  if (visible) el.removeAttribute('hidden');
+  else         el.setAttribute('hidden', '');
+}
+
+// ── BOOT ─────────────────────────────────────────────────
+
+initModal();
+initButtons();
+
+map.on('load', () => {
+  initGeolocation();
+  // Open with Relief layer on by default
+  toggleCategory('relief');
+});
