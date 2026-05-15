@@ -28,7 +28,7 @@
             <li><strong>⚡ Power:</strong> Locate an outlet to save your phone battery.</li>
             <li><strong>🌿 Parks:</strong> Find a green space to escape the noise.</li>
         </ul>
-        <button onclick="closeModal()" class="modal-close-btn">Start Exploring</button>
+        <button id="close-intro" class="modal-close-btn" onclick="document.getElementById('intro-modal').style.display='none'">Start Exploring</button>
     </div>
 </div>
 
@@ -36,17 +36,10 @@
     <button id="btn-relief" onclick="toggleCategory('relief')">Restrooms</button>
     <button id="btn-hydration" onclick="toggleCategory('hydration')">Water</button>
     <button id="btn-energy" onclick="toggleCategory('energy')">Power</button>
-    
 </nav>
 
     <div id="map"></div>
 
     <script src="script.js"></script>
-
-    <script>
-    function closeModal() {
-        document.getElementById('intro-modal').style.display = 'none';
-    }
-</script>
 </body>
 </html>

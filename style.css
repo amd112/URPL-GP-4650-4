@@ -22,28 +22,46 @@ body {
 #app-header p { font-size: 12px; color: #888; margin: 4px 0 0 0; }
 
 /* Navigation */
-.category-nav button {
-    padding: 18px 32px;
-    font-size: 16px;
-    border-radius: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-weight: 600;
+.category-nav {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000; /* Keeps it above the map */
     
-    /* Force initial state */
-    background-color: rgba(255, 255, 255, 0.1);
-    color: white;
+    /* This is the white background behind the buttons */
+    background-color: #ffffff !important; 
+    padding: 15px 25px;
+    border-radius: 50px;
+    display: flex;
+    gap: 10px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
 }
 
-.category-nav button:hover {
-    background-color: rgba(255, 255, 255, 0.2);
+.category-nav button {
+    background-color: #ffffff; /* Default button color */
+    color: #000000;
+    border: 1px solid #ddd;
+    padding: 12px 20px;
+    border-radius: 30px;
+    font-weight: bold;
+    cursor: pointer;
 }
 
+/* This keeps the buttons white when they are NOT active */
+.category-nav button:not(.active) {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    opacity: 1 !important;
+}
+
+/* Ensure the active state still works */
 .category-nav button.active {
-    border-color: white;
-    box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+    /* The JS will override these, but we keep the text dark for legibility */
+    color: #000000 !important; 
+    border-color: transparent;
 }
+
 
 /* Intro Modal Styling */
 .modal-overlay {
@@ -57,7 +75,8 @@ body {
     align-items: center; 
     justify-content: center;
     z-index: 9999; /* Increased this to be safe */
-    pointer-events: all; /* Ensures clicks are captured */
+    pointer-events: auto; /* Ensure the overlay can be interacted with */
+    display: flex;
 }
 
 
@@ -89,8 +108,9 @@ body {
 }
 .modal-close-btn {
     position: relative;
-    z-index: 10000;
-    cursor: pointer !important; /* Forces the pointer cursor */
+    z-index: 10001; /* Ensure this is HIGHER than the overlay */
+    pointer-events: all; /* Force the button to catch the click */
+    cursor: pointer !important;
 }
 
 #status-indicator {
